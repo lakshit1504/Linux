@@ -1,0 +1,166 @@
+#!/bin/bash
+
+# internsctl - Custom Linux Command
+
+function display_manual() {
+    echo "internsctl(1)                       User Commands                       internsctl(1)"
+    echo ""
+    echo "NAME"
+    echo "    internsctl - Custom Linux Command"
+    echo ""
+    echo "SYNOPSIS"
+    echo "    internsctl [OPTIONS]"
+    echo "    internsctl user create <username>"
+    echo "    internsctl user list [--sudo-only]"
+    echo "    internsctl cpu getinfo"
+    echo "    internsctl memory getinfo"
+    echo "    internsctl file getinfo [options] <file-name>"
+    echo ""
+    echo "DESCRIPTION"
+    echo "    internsctl is a custom Linux command designed for specific operations."
+    echo ""
+    echo "OPTIONS"
+    echo "    --help     Display this help message"
+    echo "    --version  Display command version"
+    echo ""
+    echo "USER COMMANDS"
+    echo "    create <username>     Create a new user with login access and home directory"
+    echo "    list [--sudo-only]    List all regular users or users with sudo permissions"
+    echo ""
+    echo "CPU COMMANDS"
+    echo "    getinfo               Display CPU information"
+    echo ""
+    echo "MEMORY COMMANDS"
+    echo "    getinfo               Display memory information"
+    echo ""
+    echo "FILE COMMANDS"
+    echo "    getinfo [options] <file-name>   Display information about a file"
+    echo "    Options:"
+    echo "      --size, -s            Print file size"
+    echo "      --permissions, -p     Print file permissions"
+    echo "      --owner, -o           Print file owner"
+    echo "      --last-modified, -m   Print last modified time"
+    echo ""
+}
+
+function display_help() {
+    echo "Help: Display help message for internsctl commands"
+}
+
+function display_version() {
+    echo "internsctl v0.1.0"
+}
+
+function create_user() {
+    if [ -z "$2" ]; then
+        echo "Usage: internsctl user create <username>"
+    else
+        sudo useradd -m -s /bin/bash "$2"
+        sudo passwd "$2"
+        echo "User '$2' created successfully."
+    fi
+}
+
+function list_users() {
+    getent passwd | cut -d: -f1
+}
+
+function list_sudo_users() {
+    grep -Po '^sudo.+:\K.*$' /etc/group | tr ',' '\n'
+}
+
+function get_cpu_info() {
+    lscpu
+}
+
+function get_memory_info() {
+    free
+}
+
+function get_file_info() {
+    if [ -z "$2" ]; then
+        echo "Usage: internsctl file getinfo [options] <file-name>"
+    else
+        file_name="$2"
+
+        while [ "$#" -gt 0 ]; do
+            case $1 in
+                --size|-s)
+                    echo "$(stat -c %s "$file_name")"
+                    ;;
+                --permissions|-p)
+                    echo "$(stat -c %A "$file_name")"
+                    ;;
+                --owner|-o)
+                    echo "$(stat -c %U "$file_name")"
+                    ;;
+                --last-modified|-m)
+                    echo "$(stat -c %y "$file_name")"
+                    ;;
+                *)
+                    # Ignore unknown options
+                    ;;
+            esac
+            shift
+        done
+    fi
+}
+
+case $1 in
+    --help)
+        display_help
+        ;;
+    --version)
+        display_version
+        ;;
+    user)
+        case $2 in
+            create)
+                create_user "$@"
+                ;;
+            list)
+                if [ "$3" == "--sudo-only" ]; then
+                    list_sudo_users
+                else
+                    list_users
+                fi
+                ;;
+            *)
+                echo "Invalid user command. Use 'internsctl user create <username>' or 'internsctl user list [--sudo-only]'"
+                ;;
+        esac
+        ;;
+    cpu)
+        case $2 in
+            getinfo)
+                get_cpu_info
+                ;;
+            *)
+                echo "Invalid CPU command. Use 'internsctl cpu getinfo'"
+                ;;
+        esac
+        ;;
+    memory)
+        case $2 in
+            getinfo)
+                get_memory_info
+                ;;
+            *)
+                echo "Invalid Memory command. Use 'internsctl memory getinfo'"
+                ;;
+        esac
+        ;;
+    file)
+        case $2 in
+            getinfo)
+                get_file_info "$@"
+                ;;
+            *)
+                echo "Invalid file command. Use 'internsctl file getinfo [options] <file-name>'"
+                ;;
+        esac
+        ;;
+    *)
+        display_manual
+        ;;
+esac
